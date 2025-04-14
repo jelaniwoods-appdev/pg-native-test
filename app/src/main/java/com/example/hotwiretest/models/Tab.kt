@@ -51,7 +51,7 @@ data class Tab(
         val default = Tab(
             name = "sign in",
             path = "users/sign_in",
-            menuId = R.id.bottom_nav_sign_in,
+            menuId = R.id.bottom_nav_feed,
             available = true,
             navigatorHostId = R.id.sign_in_nav_host
         )

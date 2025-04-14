@@ -1,10 +1,12 @@
 package com.example.hotwiretest.activities
 
+import android.app.Activity
 import android.os.Bundle
 import android.util.Log
 import com.example.hotwiretest.R
 import android.view.View
 import android.webkit.CookieManager
+import androidx.core.view.children
 import androidx.navigation.findNavController
 import dev.hotwire.navigation.activities.HotwireActivity
 import com.example.hotwiretest.models.Tab
@@ -12,49 +14,57 @@ import dev.hotwire.navigation.navigator.NavigatorConfiguration
 import dev.hotwire.core.config.Hotwire
 import dev.hotwire.core.turbo.config.PathConfiguration
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import dev.hotwire.navigation.navigator.Navigator
+import dev.hotwire.navigation.activities.HotwireActivityDelegate
+import dev.hotwire.navigation.fragments.HotwireFragment
 import dev.hotwire.navigation.navigator.NavigatorHost
-
-// manipulate fragment state
-//import androidx.fragment.app.Fragment
-//import androidx.fragment.app.FragmentManager
-//import androidx.fragment.app.FragmentManager
 
 const val baseURL = "http://10.0.2.2:3000"
 //const val baseURL = "https://photogram-native.matchthetarget.com"
 
 class MainActivity : HotwireActivity() {
-    private val tabs = Tab.all//.filter { !it.available }
-//    private var other = Tab.all.filter { it.name.contains("profile") }
-//    private var other = Tab.all.filter { it.available }
+    private val tabs = Tab.all
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.i("Cookies", "->creating")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
         bottomNav.setOnItemSelectedListener { tab ->
-//            val selectedTab = tabs.first { it.menuId == tab.itemId }
-            val selectedTab = Tab.default
+            val selectedTab = tabs.first { it.menuId == tab.itemId }
             showTab(selectedTab)
+            var nh = delegate.navigatorHost(selectedTab.navigatorHostId)
+            Log.i("Cookies", "->showing tab, get path ${nh.navigator.location}")
+            if (!nh.navigator.location?.contains("users/sign_in")!!) {
+                Log.i("Cookies", "-> HIDE? ${selectedTab.path}")
+                bottomNav.menu.findItem(R.id.bottom_nav_sign_in).setVisible(false)
+//                bottomNav.menu.removeItem(R.id.bottom_nav_sign_in)
+            } else {
+                Log.i("Cookies", "-> signed OUT make visible")
+//                delegate.resetNavigators()
+//                bottomNav.menu.children.indexOf()
+//                bottomNav.menu.findItem(bottomNav.menu.size() - 1).setVisible(true)
+                bottomNav.menu.findItem(R.id.bottom_nav_sign_in).setVisible(true)
+//                bottomNav.menu.findItem(R.id.bottom_nav_sign_in)
+//                navigatorConfigurations()
+
+            }
             true
         }
 
-//        Log.d("Cookies", "ORM is -> ${tabs.javaClass}");
-
-        showTab(tabs.first())
+        Log.i("Cookies", "pre-show tab")
+        showTab(Tab.default)
+        Log.i("Cookies", "-> loading config")
         Hotwire.loadPathConfiguration(
             context = this,
             location = PathConfiguration.Location(
                 remoteFileUrl = "$baseURL/configurations/android_v1.json"
             )
         )
-//        Log.d("Cookies", "tabs -> ${tabs.filter<Tab> { it.available }.javaClass}");
-//        Log.d("Cookies", "tabs -> ${Tab.all.javaClass}");
-//        Log.d("Cookies", "NEW has -> ${CookieManager.getInstance().hasCookies()}");
     }
 
     override fun navigatorConfigurations() = tabs.map { tab ->
+        Log.i("Cookies", "->navcnongi")
         NavigatorConfiguration(
             name = tab.name,
             startLocation = "$baseURL/${tab.path}",
@@ -62,40 +72,36 @@ class MainActivity : HotwireActivity() {
         )
     }
 
+
     private fun showTab(tab: Tab) {
-        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
-//        Log.d("Cookies", "get -> ${CookieManager.getInstance().getCookie(baseURL)}");
-        // remember_user_token presence indicates "signed in"
-        var hasRememberMeToken = false
-        if (CookieManager.getInstance().getCookie(baseURL) != null)
-            hasRememberMeToken = CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token", ignoreCase = true)
-//        Log.d("Cookies", "token -> ${hasRememberMeToken}");
+        var x = delegate.currentNavigator?.host?.id?.toString()
+        if (x != null) {
+            Log.i("Cookies", x)
+        } else {
+            Log.i("Cookies", "nah")
+        }
+        var signedIn = CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token")
+        Log.i("Cookies", "signed in -> " + signedIn.toString())
+        if (!signedIn) {
+            Log.i("Cookies", "showing sign in only? -> " + signedIn.toString())
+//            delegate.resetNavigators()
+
+//            delegate.setCurrentNavigator(
+//                NavigatorConfiguration(
+//                    name = "sign in",
+//                    startLocation = "users/sign_n",
+//                    navigatorHostId = R.id.sign_in_nav_host
+//                )
+//            )
+        }
         tabs.forEach {
             val view = findViewById<View>(it.navigatorHostId)
-//            Log.d("Cookies", "title -> ${view.accessibilityPaneTitle}");
-//          // if view is already visible and it the tab is clicked, invalidate to reload?
-//            view.visibility = if (it == tab) View.VISIBLE else View.GONE
-            if (it == tab)
-                view.visibility = View.VISIBLE
-            else
-                view.visibility = View.GONE
-                if (hasRememberMeToken == true) {
-//                    bottomNav.requestLayout()
-//                    bottomNav.invalidate()
-
-//                    unable to get navigator
-//                    if (findNavController(bottomNav.id) != null) {
-//                        val navC = findNavController(bottomNav.id)
-//                        navC.currentDestination
-//                        Log.d("Cookies", "nav dest -> ${navC.currentDestination}")
-//                    }
-
-
-//                    view.postInvalidate()
-//                    Log.d("Cookies", "invalidating view ->")
-                    Log.d("Cookies", "signed in")
-                }
-
+            view.visibility = if (it == tab) View.VISIBLE else View.GONE
         }
+    }
+
+    private fun isSignedIn() {
+        var x = CookieManager.getInstance().getCookie(baseURL)
+        Log.i("Cookies", x)
     }
 }

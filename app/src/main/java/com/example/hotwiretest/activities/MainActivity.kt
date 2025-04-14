@@ -7,7 +7,10 @@ import com.example.hotwiretest.R
 import android.view.View
 import android.webkit.CookieManager
 import androidx.core.view.children
+import androidx.core.view.isVisible
+import androidx.navigation.NavController
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
 import dev.hotwire.navigation.activities.HotwireActivity
 import com.example.hotwiretest.models.Tab
 import dev.hotwire.navigation.navigator.NavigatorConfiguration
@@ -28,6 +31,10 @@ class MainActivity : HotwireActivity() {
         Log.i("Cookies", "->creating")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+//        val nav = delegate.activity.findNavController(R.id.feed_nav_host)
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.feed_nav_host) as NavHostFragment
+        val navController = navHostFragment.navController
+//        val nav: NavController = findNavController(R.id.feed_nav_host)
 
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
         bottomNav.setOnItemSelectedListener { tab ->
@@ -51,9 +58,40 @@ class MainActivity : HotwireActivity() {
             }
             true
         }
+        navController.addOnDestinationChangedListener { c,d,t ->
+            Log.i("Cookies", "-> wah ${CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token")} | ${c} | ${d}")
+            if (CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token")) {
+                bottomNav.menu.findItem(R.id.bottom_nav_sign_in).setVisible(false)
+            } else {
+                bottomNav.menu.findItem(R.id.bottom_nav_sign_in).setVisible(true)
+            }
+            try {
+                var x = null as Tab
+                for (tab in tabs) {
+                    var l = findViewById<BottomNavigationView>(tab.navigatorHostId)
+                    if (l.isVisible)
+                        x = tab
+                }
+                if (x != null) {
+                    var nh = delegate.navigatorHost(x.navigatorHostId)
+                    val u = nh.navigator.location
+                    Log.i("Cookies", "location -> ${u}")
+                }
+            } catch (e: Exception) {
+                    Log.i("Cookies", "delegate no exist -> ${e}")
 
+            }
+        }
         Log.i("Cookies", "pre-show tab")
-        showTab(Tab.default)
+        if (CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token")) {
+            // signed in
+            showTab(tabs.first())
+            bottomNav.menu.findItem(R.id.bottom_nav_sign_in).setVisible(false)
+        } else {
+            // signed out
+            showTab(tabs.last())
+            bottomNav.menu.findItem(R.id.bottom_nav_sign_in).setVisible(true)
+        }
         Log.i("Cookies", "-> loading config")
         Hotwire.loadPathConfiguration(
             context = this,

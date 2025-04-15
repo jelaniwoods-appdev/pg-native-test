@@ -7,6 +7,7 @@ data class Tab(
     val name: String,
     val path: String,
     val available: Boolean,
+    val authenticated: Boolean,
     @IdRes val menuId: Int,
     @IdRes val navigatorHostId: Int
 ) {
@@ -17,6 +18,7 @@ data class Tab(
                 path = "",
                 menuId = R.id.bottom_nav_feed,
                 available = false,
+                authenticated = true,
                 navigatorHostId = R.id.feed_nav_host
             ),
             Tab(
@@ -24,6 +26,7 @@ data class Tab(
                 path = "discover",
                 menuId = R.id.bottom_nav_discover,
                 available = false,
+                authenticated = true,
                 navigatorHostId = R.id.discover_nav_host
             ),
             Tab(
@@ -31,6 +34,7 @@ data class Tab(
                 path = "users",
                 menuId = R.id.bottom_nav_search,
                 available = false,
+                authenticated = true,
                 navigatorHostId = R.id.search_nav_host
             ),
             Tab(
@@ -38,6 +42,7 @@ data class Tab(
                 path = "profile",
                 menuId = R.id.bottom_nav_profile,
                 available = false,
+                authenticated = true,
                 navigatorHostId = R.id.edit_profile_nav_host
             ),
             Tab(
@@ -45,6 +50,7 @@ data class Tab(
                 path = "users/sign_in",
                 menuId = R.id.bottom_nav_sign_in,
                 available = true,
+                authenticated = false,
                 navigatorHostId = R.id.sign_in_nav_host
             )
         )
@@ -53,6 +59,7 @@ data class Tab(
             path = "users/sign_in",
             menuId = R.id.bottom_nav_feed,
             available = true,
+            authenticated = true,
             navigatorHostId = R.id.sign_in_nav_host
         )
         val other = arrayOf(
@@ -61,6 +68,7 @@ data class Tab(
                 path = "users/sign_in",
                 menuId = R.id.bottom_nav_feed,
                 available = true,
+                authenticated = true,
                 navigatorHostId = R.id.feed_nav_host
             )
         )

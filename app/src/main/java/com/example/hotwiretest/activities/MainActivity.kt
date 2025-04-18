@@ -29,7 +29,6 @@ class MainActivity : HotwireActivity() {
     private val tabs = Tab.all
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.i("Cookies", "->creating")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -37,28 +36,27 @@ class MainActivity : HotwireActivity() {
         bottomNav.setOnItemSelectedListener { tab ->
             val selectedTab = tabs.first { it.menuId == tab.itemId }
             showTab(selectedTab)
-            var nh = delegate.navigatorHost(selectedTab.navigatorHostId)
-            Log.i("Cookies", "->showing tab, get path ${nh.navigator.location}")
-            if (!nh.navigator.location?.contains("users/sign_in")!!) {
-                Log.i("Cookies", "-> HIDE? ${selectedTab.path}")
-//                delegate.resetNavigators()
-            } else {
-                Log.i("Cookies", "-> signed OUT make visible")
-            }
             true
         }
-        Log.i("Cookies", "pre-show tab")
-        if (CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token")) {
+
+        if (isSignedIn()) {
             // signed in
-            showTab(tabs.first())
             bottomNav.menu.findItem(R.id.bottom_nav_sign_in).setVisible(false)
+            val hiddenTabs = tabs.filter { it.authenticated && !tabIsVisible(bottomNav, it) }
+            hiddenTabs.forEach { bottomNav.menu.findItem(it.menuId).setVisible(true) }
+            showTab(tabs.first())
         } else {
             // signed out
-            showTab(tabs.last())
             bottomNav.menu.findItem(R.id.bottom_nav_sign_in).setVisible(true)
+            showTab(tabs.last())
+            val visibleTabs = tabs.filter { it.authenticated && tabIsVisible(bottomNav, it) }
+            visibleTabs.forEach { bottomNav.menu.findItem(it.menuId).setVisible(false) }
         }
+
         tabs.forEach { setTabObserver(it) }
-        Log.i("Cookies", "-> loading config")
+//        setTabObserver(tabs.get(3))
+//        setTabObserver(tabs.last())
+
         Hotwire.loadPathConfiguration(
             context = this,
             location = PathConfiguration.Location(
@@ -68,7 +66,6 @@ class MainActivity : HotwireActivity() {
     }
 
     override fun navigatorConfigurations() = tabs.map { tab ->
-        Log.i("Cookies", "->navcnongi")
         NavigatorConfiguration(
             name = tab.name,
             startLocation = "$baseURL/${tab.path}",
@@ -78,17 +75,6 @@ class MainActivity : HotwireActivity() {
 
 
     private fun showTab(tab: Tab) {
-        var x = delegate.currentNavigator?.host?.id?.toString()
-        if (x != null) {
-            Log.i("Cookies", x)
-        } else {
-            Log.i("Cookies", "nah")
-        }
-        var signedIn = CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token")
-        Log.i("Cookies", "signed in -> " + signedIn.toString())
-        if (!signedIn) {
-            Log.i("Cookies", "showing sign in only? -> " + signedIn.toString())
-        }
         tabs.forEach {
             val view = findViewById<View>(it.navigatorHostId)
             view.visibility = if (it == tab) View.VISIBLE else View.GONE
@@ -96,35 +82,52 @@ class MainActivity : HotwireActivity() {
     }
 
     private fun setTabObserver(tab: Tab) {
-        Log.i("TabObserver", "setting observer for ${tab.name}")
+        Log.i("TabObserver", "tab -> ${tab.name}")
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
         val navHostFragment = supportFragmentManager.findFragmentById(tab.navigatorHostId) as NavHostFragment
         val navController = navHostFragment.navController
+
         navController.addOnDestinationChangedListener { controller,destination,_ ->
-            var signedIn = CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token")
-            Log.i("TabObserver", "signed in? -> ${signedIn}")
+            var signedIn = isSignedIn()
             var currentlyVisible = bottomNav.menu.findItem(tab.menuId).isVisible
-            if (signedIn && tab.authenticated && !currentlyVisible) {
-                Log.i("TabObserver", "setting ${tab.name} -> VISIBLE")
-                Log.i("TabObserver", "resetting navigators")
-                bottomNav.menu.findItem(tab.menuId).setVisible(true)
-                delegate.resetNavigators()
+
+            Log.i("TabObserver", "-> ${tab.name} -> ${delegate.currentNavigator?.location}")
+            // when signing in
+            if (signedIn && !tab.authenticated && currentlyVisible) {
+                // make authenticated tabs visible
+                // select feed tab
+                // hide sign in tab
+                val hiddenTabs = tabs.filter { it.authenticated && !tabIsVisible(bottomNav, it) }
+                hiddenTabs.forEach { bottomNav.menu.findItem(it.menuId).setVisible(true) }
+                showTab(tabs.first())
+                bottomNav.menu.findItem(tabs.last().menuId).setVisible(false)
+
+                Log.i("TabObserver", " hidden -> ${hiddenTabs.size}")
+                if (hiddenTabs.size > 0)
+                    delegate.resetNavigators()
+                Log.i("TabObserver", "signing in -> ${tab.name}")
+            // when signing out
             } else if (!signedIn && tab.authenticated && currentlyVisible) {
-                Log.i("TabObserver", "setting ${tab.name} -> INVISIBLE")
-                Log.i("TabObserver", "resetting navigators")
-                bottomNav.menu.findItem(tab.menuId).setVisible(false)
-                delegate.resetNavigators()
-            } else if (!signedIn && !tab.authenticated && !currentlyVisible) {
-                Log.i("TabObserver", "setting ${tab.name} -> VISIBLE")
-                bottomNav.menu.findItem(tab.menuId).setVisible(true)
-            } else if (signedIn && !tab.authenticated && currentlyVisible) {
-                Log.i("TabObserver", "setting ${tab.name} -> INVISIBLE")
-                bottomNav.menu.findItem(tab.menuId).setVisible(false)
+                // make sign in tab visible
+                // select sign in tab
+                // hide authenticated tabs
+                bottomNav.menu.findItem(tabs.last().menuId).setVisible(true)
+                showTab(tabs.last())
+                val visibleTabs = tabs.filter { it.authenticated && tabIsVisible(bottomNav, it) }
+                visibleTabs.forEach { bottomNav.menu.findItem(it.menuId).setVisible(false) }
+                Log.i("TabObserver", " visible -> ${visibleTabs.size}")
+                if (visibleTabs.size > 0)
+                    delegate.resetNavigators()
+                Log.i("TabObserver", "signing out -> ${tab.name}")
             }
         }
     }
-    private fun isSignedIn() {
-        var x = CookieManager.getInstance().getCookie(baseURL)
-        Log.i("Cookies", x)
+
+    private fun isSignedIn() : Boolean{
+        return CookieManager.getInstance().getCookie(baseURL).contains("remember_user_token")
+    }
+
+    private fun tabIsVisible(nav: BottomNavigationView, tab: Tab) : Boolean  {
+        return nav.menu.findItem(tab.menuId).isVisible
     }
 }

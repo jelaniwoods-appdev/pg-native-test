@@ -22,6 +22,7 @@ import dev.hotwire.navigation.fragments.HotwireFragment
 import dev.hotwire.navigation.navigator.NavigatorHost
 import kotlin.math.sign
 
+//const val baseURL = "https://supreme-space-rotary-phone-v675pwwjrr625rq-3000.app.github.dev"
 const val baseURL = "http://10.0.2.2:3000"
 //const val baseURL = "https://photogram-native.matchthetarget.com"
 
